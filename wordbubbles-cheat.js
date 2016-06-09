@@ -35,9 +35,9 @@ lr.on('end', function () {
         .then(function () {
             rl = readline.createInterface(process.stdin, process.stdout);
         })
-        // .then(promptTree)
+         .then(promptTree)
         .then(loadTree)
-        // .then(promptSize)
+         .then(promptSize)
         .then(loadSize)
         .then(run)
         .then(final)
