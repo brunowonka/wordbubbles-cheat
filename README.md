@@ -1,4 +1,4 @@
-# Ruzzle solver
+# Wordbubbles solver
 
 Performs word search to cheat on WordBubbles word puzzle game.
 
