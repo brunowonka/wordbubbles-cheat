@@ -159,7 +159,8 @@ function loadTree(line) {
         //line = "nerae;hotgr;tniat;adato;prenp"
         // line = "asiten;fltraa;lditsn;llycoe;beanre;conves"
         // line = ".na;.rl;jou";
-        line = "insapa;nnjsic;aeenif;sfeses;slteto;iplskj";
+        // line = "insapa;nnjsic;aeenif;sfeses;slteto;iplskj";
+        line = "niniya;loadsp;uetrna;ntsrts;ietate;pstewd";
     }
     console.log("loading tree " + line);
 
@@ -184,7 +185,8 @@ function loadTree(line) {
 function loadSize(line) {
     if (!line) {
         // line = "6,6,6,7";
-        line = "8,6,5,5,4,4,4";
+        // line = "8,6,5,5,4,4,4";
+        line = "6,6,6,7,4,4,3";
         // line = "7";
     }
 
@@ -251,7 +253,7 @@ function positionDelta(position, index) {
 }
 
 function validPosition(r) {
-    return r[0] < MATRIX[0].length && r[1] < MATRIX.length && r[0] >= 0 && r[1] >= 0;
+    return r[0] < MATRIX.length && r[1] < MATRIX[0].length && r[0] >= 0 && r[1] >= 0;
 }
 
 var DELTA_COUNT = 8;
@@ -430,6 +432,15 @@ function getEasiest(used) {
 function solve() {
     console.log("solving...");
     console.log("Found  " + FOUND.length + " words in total");
+    var W = [];
+    FOUND.forEach(function(v){
+       if( W.indexOf(v.word) < 0 ) {
+           W.push(v.word);
+       }
+    });
+    W.forEach(function(v){
+        console.log(v);
+    });
 
     function runEasiest(used, selected) {
         var easiest = getEasiest(used);
@@ -538,6 +549,8 @@ function solve() {
         return suggestSolutions(T,[]);
     }
 }
+
+
 
 
 function promptValidResponse(word) {
