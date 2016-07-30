@@ -1,5 +1,6 @@
 var LineByLineReader = require('line-by-line');
 var lr = new LineByLineReader('words');
+var process = require('process');
 
 var Q = require('q');
 var readline = require('readline'), rl;
@@ -27,9 +28,16 @@ lr.on('line', function (line) {
     lr.resume();
 });
 
+
+var done = false;
 lr.on('end', function () {
     // All lines are read, file is closed now.
-    console.log("done");
+    if (!done) {
+        console.log("done");
+        done = true;
+    } else {
+        return;
+    }
 
 
     Q.fcall(buildPivots)
@@ -53,7 +61,7 @@ lr.on('end', function () {
 
 function buildPivots() {
 
-    console.log("building pivots");
+    console.log("building pivots on " + WORDS.length + " words");
     var i, l = WORDS.length, c;
     var last = null;
     for (i = 0; i < l; i++) {
@@ -160,7 +168,8 @@ function loadTree(line) {
         // line = "asiten;fltraa;lditsn;llycoe;beanre;conves"
         // line = ".na;.rl;jou";
         // line = "insapa;nnjsic;aeenif;sfeses;slteto;iplskj";
-        line = "niniya;loadsp;uetrna;ntsrts;ietate;pstewd";
+        //line = "niniya;loadsp;uetrna;ntsrts;ietate;pstewd";
+        line = "ylaaetc;lninrse;tiadulp;nantnra;telne..;ftost..;hlewt..";
     }
     console.log("loading tree " + line);
 
@@ -186,8 +195,9 @@ function loadSize(line) {
     if (!line) {
         // line = "6,6,6,7";
         // line = "8,6,5,5,4,4,4";
-        line = "6,6,6,7,4,4,3";
+        // line = "6,6,6,7,4,4,3";
         // line = "7";
+        line = "6,6,6,7,7,7,4";
     }
 
     var a = line.split(",");
@@ -398,11 +408,11 @@ function addFriend(own, f) {
     own.friends[f.word.length].push(f);
 }
 
-function getEasiest(used) {
+function getEasiest(used,sizes) {
     var positions = [],
         i, j;
     var valid = FOUND.filter(function (v) {
-        return !pointsIntersect(v.used, used);
+        return sizes.indexOf(v.word.length) >= 0 && !pointsIntersect(v.used, used);
     });
     for (i = 0; i < MATRIX.length; i++) {
 
@@ -424,8 +434,22 @@ function getEasiest(used) {
         return a.words.length - b.words.length;
     });
 
-    return positions[0];
-
+    if( positions.length == 0 ) {
+        return null;
+    } else {
+        var acc = [],
+            n = positions[0].words.length;
+        for( i = 0 ; i < positions.length; i++ ) {
+            if( positions[i].words.length === n ) {
+                acc = acc.concat(positions[i].words);
+            } else {
+                break;
+            }
+        }
+        return {
+            words : acc
+        };
+    }
 }
 
 
@@ -433,52 +457,103 @@ function solve() {
     console.log("solving...");
     console.log("Found  " + FOUND.length + " words in total");
     var W = [];
-    FOUND.forEach(function(v){
-       if( W.indexOf(v.word) < 0 ) {
-           W.push(v.word);
-       }
+    FOUND.forEach(function (v) {
+        if (W.indexOf(v.word) < 0) {
+            W.push(v.word);
+        }
     });
-    W.forEach(function(v){
+    W.forEach(function (v) {
         console.log(v);
     });
 
+    var i = 0;
+
     function runEasiest(used, selected) {
-        var easiest = getEasiest(used);
+
+
+        i++;
+        if (i % 1000 == 0) {
+            process.stdout.write(".");
+            // console.log(selected.length + "...");
+        }
+        var easiest = getEasiest(used, getAvailableSizes(selected));
         var ret = [];
+
+
+        function pushSolution(sol) {
+            if (isCompleteSolution(sol)) {
+                console.log("found solution =====");
+                sol.forEach(function (v) {
+                    console.log(v.word);
+                })
+            }
+            ret.push(sol);
+        }
+
         if (easiest) {
             // console.log("easiest words: on position " + easiest.point[0] + ", " + easiest.point[1]);
             if (easiest.words.length === 0) {
                 // console.log("no more words");
-                ret.push(selected);
+                pushSolution(selected);
             } else {
                 easiest.words.forEach(function (v) {
                     // console.log("selecting " + v.word);
-                    ret = ret.concat(runEasiest(used.concat(v.used), selected.concat(v)));
+                    var t = selected.concat(v);
+                    if (t.length >= WORD_SIZES.length) {
+                        pushSolution(t);
+                    } else {
+                        ret = ret.concat(runEasiest(used.concat(v.used), t));
+                    }
                 });
             }
         } else {
-            ret.push(selected);
+            pushSolution(selected);
         }
         return ret;
     }
 
-    var ct = {};
-    WORD_SIZES.forEach(function (v) {
-        if (ct[v] === undefined) {
-            ct[v] = 1;
-        } else {
-            ct[v] += 1;
-        }
-    });
+    function getCounts() {
+        var ct = {};
+        WORD_SIZES.forEach(function (v) {
+            if (ct[v] === undefined) {
+                ct[v] = 1;
+            } else {
+                ct[v] += 1;
+            }
+        });
+        return ct;
+    }
+
+    function getAvailableSizes(selected) {
+        var ct = getCounts();
+        selected.forEach(function (v) {
+            ct[v.word.length] -= 1;
+        });
+        var sz = [];
+        Object.keys(ct).forEach(function(k){
+            if( ct[k] > 0 ) {
+                sz.push(parseInt(k));
+            }
+        });
+        return sz;
+    }
+
+    var ct = getCounts();
+
+
     var solutions = runEasiest([], []);
 
-
-    var T = solutions.filter(function (v) {
+    function isCompleteSolution(v) {
         return Object.keys(ct).every(function (ck) {
             return ct[ck] === v.filter(function (w) {
                     return w.word.length === parseInt(ck);
                 }).length;
         });
+    }
+
+
+    var T = solutions.filter(function (v) {
+        return isCompleteSolution(v);
     });
     if (T.length === 0) {
         console.log("no great soltuions found");
@@ -546,11 +621,9 @@ function solve() {
             });
         });
 
-        return suggestSolutions(T,[]);
+        return suggestSolutions(T, []);
     }
 }
-
-
 
 
 function promptValidResponse(word) {
@@ -602,8 +675,8 @@ function suggestSolutions(solutions, confirmed) {
             return promptValidResponse(WW[0])
         }).then(function (canMake) {
             if (canMake) {
-                return suggestSolutions(solutions.filter(function(v){
-                    return v.some(function(v){
+                return suggestSolutions(solutions.filter(function (v) {
+                    return v.some(function (v) {
                         return v.word === WW[0];
                     });
                 }), confirmed.concat(WW[0]));
@@ -614,14 +687,14 @@ function suggestSolutions(solutions, confirmed) {
                     });
                 }), confirmed);
             }
-        }).done(function(){
-           deferred.resolve();
+        }).done(function () {
+            deferred.resolve();
         });
 
         return deferred.promise;
-    } else if( solutions.length === 1 ) {
+    } else if (solutions.length === 1) {
         console.log("Solution is: ");
-        solutions[0].forEach(function(v){
+        solutions[0].forEach(function (v) {
             console.log(v.word);
         });
     } else {
